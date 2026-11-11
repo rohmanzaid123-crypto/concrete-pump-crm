@@ -1,0 +1,6 @@
+{
+  "name": "Concrete Pump Management System (CPMS)",
+  "description": "Sistem ERP & CRM manajemen operasional persewaan armada pompa beton (Concrete Pump) di Indonesia untuk Owner dan Admin.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
