@@ -127,7 +127,7 @@ export const LoginPage: React.FC = () => {
                 {config.isConfigured ? 'Supabase PostgreSQL' : 'Belum dikonfigurasi'}
               </span>
             </div>
-            <span className={`text-[11px] font-semibold ${config.isConfigured ? 'text-emerald-600' : 'text-rose-600'}`}>{config.isConfigured ? 'Terhubung' : 'Tidak siap'}</span>
+            <span className={`text-[11px] font-semibold ${config.isConfigured ? 'text-emerald-600' : 'text-rose-600'}`}>{config.isConfigured ? 'Konfigurasi ada' : 'Tidak siap'}</span>
           </div>
         </div>
 
