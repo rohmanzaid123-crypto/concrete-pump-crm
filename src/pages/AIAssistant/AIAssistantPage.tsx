@@ -31,7 +31,6 @@ import {
   ArrowRight,
   CheckCircle2,
   HelpCircle,
-  RefreshCw,
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -61,7 +60,7 @@ interface ChatMessage {
 }
 
 export const AIAssistantPage: React.FC = () => {
-  const { role, switchRole } = useAuth();
+  const { role } = useAuth();
   const [activeTab, setActiveTab] = useState<AssistantTab>('owner_assistant');
 
   // Customer Service State
@@ -84,14 +83,8 @@ export const AIAssistantPage: React.FC = () => {
     {
       id: 'owner-init-1',
       sender: 'ai',
-      text:
-        'Selamat datang, Pak Ir. H. Sudirman. Saya adalah AI Executive Business Advisor CPMS Anda.\n\nSaya siap memberikan analisis data riil terverifikasi langsung dari pembukuan keuangan, log penyewaan 22 armada, dan status operasional pool.\n\nSilakan pilih salah satu pertanyaan cepat di bawah atau ajukan pertanyaan spesifik.',
-      timestamp: '08:00 WIB',
-      auditTrail: {
-        period: 'Maret 2026 (Bulan Berjalan)',
-        keyFigures: { omzet: 'Rp 58.700.000', laba_bersih: 'Rp 42.250.000 (Margin 72.0%)' },
-        dataSources: ['cpms_invoices', 'cpms_payments', 'cpms_expenses', 'cpms_fleet_units'],
-      },
+      text: 'Asisten finansial owner sedang dinonaktifkan sementara. Fitur akan dibuka kembali setelah laporan terhubung ke data produksi yang terverifikasi.',
+      timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
     },
   ]);
 
@@ -165,7 +158,7 @@ export const AIAssistantPage: React.FC = () => {
       const res: AIOwnerAssistantResponse = await askAIOwnerAssistant({
         query,
         userRole: role,
-        userEmail: 'owner@cpms-indonesia.com',
+        userEmail: undefined,
       });
 
       const aiMsg: ChatMessage = {
@@ -213,14 +206,7 @@ export const AIAssistantPage: React.FC = () => {
           >
             {role === 'owner' ? '👑 Owner (Akses Penuh)' : '🛡️ Admin (Terbatas)'}
           </span>
-          <button
-            onClick={() => switchRole(role === 'owner' ? 'admin' : 'owner')}
-            className="text-[11px] font-bold text-slate-700 hover:text-orange-600 underline ml-1 cursor-pointer flex items-center gap-0.5"
-            title="Ubah peran untuk menguji pembatasan hak akses keuangan"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Switch Role
-          </button>
+
         </div>
       </div>
 
