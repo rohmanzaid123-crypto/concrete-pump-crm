@@ -48,6 +48,7 @@ export const UnitDetailModal: React.FC<UnitDetailModalProps> = ({
   const { user, role } = useAuth();
   const [activeTab, setActiveTab] = useState<'specs' | 'maintenance' | 'service_schedule' | 'rentals'>('specs');
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
+  const [maintenanceError, setMaintenanceError] = useState('');
 
   // Add maintenance inline state
   const [showAddMaintenance, setShowAddMaintenance] = useState(false);
@@ -62,8 +63,13 @@ export const UnitDetailModal: React.FC<UnitDetailModalProps> = ({
 
   const loadMaintenance = async () => {
     if (!unit) return;
-    const records = await fetchUnitMaintenance(unit.id);
-    setMaintenanceRecords(records);
+    try {
+      const records = await fetchUnitMaintenance(unit.id);
+      setMaintenanceRecords(records);
+      setMaintenanceError('');
+    } catch (err) {
+      setMaintenanceError(err instanceof Error ? err.message : String(err));
+    }
   };
 
   useEffect(() => {
@@ -87,31 +93,36 @@ export const UnitDetailModal: React.FC<UnitDetailModalProps> = ({
   const handleRecordMaintenanceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim() || !user) return;
+    setMaintenanceError('');
 
-    await recordMaintenance(
-      {
-        unit_id: unit.id,
-        unit_code: unit.unit_code,
-        service_date: new Date().toISOString(),
-        service_type: serviceType,
-        description: description.trim(),
-        workshop_technician: technician.trim(),
-        cost_amount: Number(costAmount),
-        engine_hour_at_service: Number(engineHourAtService),
-        damage_notes: damageNotes.trim(),
-        replaced_parts: replacedParts.trim(),
-        next_recommended_service_date: nextRecDate || undefined,
-      },
-      user.email,
-      role
-    );
+    try {
+      await recordMaintenance(
+        {
+          unit_id: unit.id,
+          unit_code: unit.unit_code,
+          service_date: new Date().toISOString(),
+          service_type: serviceType,
+          description: description.trim(),
+          workshop_technician: technician.trim(),
+          cost_amount: Number(costAmount),
+          engine_hour_at_service: Number(engineHourAtService),
+          damage_notes: damageNotes.trim(),
+          replaced_parts: replacedParts.trim(),
+          next_recommended_service_date: nextRecDate || undefined,
+        },
+        user.email,
+        role
+      );
 
-    setDescription('');
-    setDamageNotes('');
-    setReplacedParts('');
-    setShowAddMaintenance(false);
-    loadMaintenance();
-    onRefresh();
+      setDescription('');
+      setDamageNotes('');
+      setReplacedParts('');
+      setShowAddMaintenance(false);
+      await loadMaintenance();
+      onRefresh();
+    } catch (err) {
+      setMaintenanceError(err instanceof Error ? err.message : String(err));
+    }
   };
 
   // KIR expiry check
@@ -513,6 +524,12 @@ export const UnitDetailModal: React.FC<UnitDetailModalProps> = ({
                     </button>
                   </div>
                 </form>
+              )}
+
+              {maintenanceError && (
+                <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+                  {maintenanceError}
+                </div>
               )}
 
               {/* Maintenance List */}
