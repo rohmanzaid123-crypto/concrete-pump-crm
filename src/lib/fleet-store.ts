@@ -841,20 +841,28 @@ export interface FleetFilters {
 
 export async function fetchFleetUnits(filters?: FleetFilters): Promise<PumpUnit[]> {
   const client = getSupabaseClient();
-  let units = loadStoredUnits();
+  let units: PumpUnit[];
 
   if (client) {
-    try {
-      const { data, error } = await client.from('pump_units').select('*').order('unit_code', { ascending: true });
-      if (!error && data && data.length > 0) {
-        units = data as PumpUnit[];
-      }
-    } catch {
-      // fallback to stored
+    const { data, error } = await client
+      .from('pump_units')
+      .select('*')
+      .order('unit_code', { ascending: true });
+
+    if (error) {
+      console.error('Supabase fetch fleet units error:', error);
+      throw new Error(`Gagal memuat data armada dari Supabase: ${error.message}`);
     }
+
+    // An empty Supabase table is a valid empty result. Do not silently show
+    // demo/local seed records when the real database has no units.
+    units = (data || []) as PumpUnit[];
+    saveStoredUnits(units);
+  } else {
+    // Only use local cache when Supabase has not been configured at all.
+    units = loadStoredUnits();
   }
 
-  // Filter query
   if (filters?.query) {
     const q = filters.query.toLowerCase().trim();
     units = units.filter(
