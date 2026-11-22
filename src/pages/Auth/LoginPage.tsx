@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Truck,
-  ArrowRight,
-  Database,
-  CheckCircle2,
-  AlertCircle,
-} from 'lucide-react';
+import { Truck, ArrowRight, Database, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getStoredSupabaseConfig } from '../../lib/supabase';
 
@@ -33,16 +27,6 @@ export const LoginPage: React.FC = () => {
       setErrorMessage(msg);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleQuickSelect = (roleType: 'owner' | 'admin') => {
-    if (roleType === 'owner') {
-      setEmail('owner@cpms.id');
-      setPassword('ownerpass123');
-    } else {
-      setEmail('admin@cpms.id');
-      setPassword('adminpass123');
     }
   };
 
@@ -140,13 +124,10 @@ export const LoginPage: React.FC = () => {
               <Database className="w-3.5 h-3.5 text-slate-500" />
               <span>Penyimpanan:</span>
               <span className="font-semibold text-slate-800">
-                {config.isConfigured ? 'Supabase PostgreSQL' : 'Local Persistent Storage'}
+                {config.isConfigured ? 'Supabase PostgreSQL' : 'Belum dikonfigurasi'}
               </span>
             </div>
-            <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" />
-              Siap
-            </span>
+            <span className={`text-[11px] font-semibold ${config.isConfigured ? 'text-emerald-600' : 'text-rose-600'}`}>{config.isConfigured ? 'Terhubung' : 'Tidak siap'}</span>
           </div>
         </div>
 
