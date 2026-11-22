@@ -259,20 +259,14 @@ export const AIAssistantPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => switchRole('owner')}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shrink-0 shadow-sm flex items-center gap-1.5 transition-colors"
-              >
-                <Crown className="w-4 h-4 text-orange-400" />
-                <span>Beralih ke Akun Owner</span>
-              </button>
+
             </div>
           ) : (
             <div className="bg-emerald-50 border border-emerald-300 rounded-xl p-3.5 text-emerald-950 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
                 <span>
-                  <strong>Akses Owner Terverifikasi:</strong> Pertanyaan finansial diproses dengan query terkontrol langsung ke database akuntansi riil. <em>(Zero Hallucination Policy & No Free SQL).</em>
+                  <strong>Akses Owner:</strong> Asisten finansial sedang dinonaktifkan sampai seluruh laporan terhubung ke database produksi.
                 </span>
               </div>
               <span className="font-mono text-[10px] bg-emerald-200/70 text-emerald-900 px-2 py-0.5 rounded font-bold">
