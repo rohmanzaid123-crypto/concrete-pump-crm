@@ -213,7 +213,7 @@ export const UnitFormModal: React.FC<UnitFormModalProps> = ({
             total_maintenance_cost: 0,
             stnk_expiry_date: stnkExpiry,
             kir_expiry_date: kirExpiry,
-            insurance_expiry_date: insuranceExpiry,
+            insurance_expiry_date: insuranceExpiry || undefined,
             total_rental_hours: 0,
             total_m3_pumped: 0,
             notes: notes.trim(),
