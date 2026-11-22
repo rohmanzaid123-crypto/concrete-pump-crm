@@ -5,7 +5,6 @@ import {
   Shield,
   Layers,
   Lock,
-  RefreshCw,
 } from 'lucide-react';
 import { NAVIGATION_ITEMS } from '../../config/navigation';
 import { useAuth } from '../../context/AuthContext';
@@ -22,7 +21,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   onSelectTab,
 }) => {
-  const { user, role, logout, switchRole } = useAuth();
+  const { user, role, logout } = useAuth();
 
   const categories = [
     { key: 'core', label: 'Ringkasan Utama' },
@@ -54,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Role Switcher & Identity Bar */}
+      {/* Identity and verified role */}
       <div className="px-3 py-2.5 bg-[#0e213d] border-b border-slate-800/80 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Shield className="w-3.5 h-3.5 text-slate-400" />
@@ -69,14 +68,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {role}
           </span>
         </div>
-        <button
-          onClick={() => switchRole(role === 'owner' ? 'admin' : 'owner')}
-          title="Beralih peran (Owner / Admin) untuk verifikasi akses"
-          className="p-1 hover:bg-slate-700/60 text-slate-400 hover:text-white rounded transition-colors text-xs flex items-center gap-1"
-        >
-          <RefreshCw className="w-3 h-3" />
-          <span className="text-[10px]">Switch</span>
-        </button>
       </div>
 
       {/* Navigation List */}
