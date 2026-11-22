@@ -51,6 +51,21 @@ CREATE TABLE IF NOT EXISTS public.operators (
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
+-- Existing early/manual setup may have created a simplified operators table.
+-- Add only the CPMS operator columns if they are missing.
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS role_type TEXT NOT NULL DEFAULT 'operator_boom';
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS phone_number TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS whatsapp_number TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS sio_number TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS sio_expiry_date DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS sim_type TEXT NOT NULL DEFAULT 'B2 UMUM';
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS assigned_unit_id UUID;
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS assigned_unit_code TEXT;
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'aktif';
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS total_pour_projects INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now());
+
 CREATE TABLE IF NOT EXISTS public.pump_units (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   unit_code TEXT NOT NULL UNIQUE,
