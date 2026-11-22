@@ -177,6 +177,8 @@ const INITIAL_FOLLOWUPS: CustomerFollowup[] = [
 
 // Helper to get customers from persistent store
 function loadStoredCustomers(): Customer[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   const raw = localStorage.getItem(STORAGE_CUSTOMERS);
   if (!raw) {
     localStorage.setItem(STORAGE_CUSTOMERS, JSON.stringify(INITIAL_CUSTOMERS));
@@ -194,6 +196,8 @@ function saveStoredCustomers(customers: Customer[]): void {
 }
 
 function loadStoredContacts(): CustomerContact[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   const raw = localStorage.getItem(STORAGE_CONTACTS);
   if (!raw) {
     localStorage.setItem(STORAGE_CONTACTS, JSON.stringify(INITIAL_CONTACTS));
@@ -211,6 +215,8 @@ function saveStoredContacts(contacts: CustomerContact[]): void {
 }
 
 function loadStoredFollowups(): CustomerFollowup[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   const raw = localStorage.getItem(STORAGE_FOLLOWUPS);
   if (!raw) {
     localStorage.setItem(STORAGE_FOLLOWUPS, JSON.stringify(INITIAL_FOLLOWUPS));
