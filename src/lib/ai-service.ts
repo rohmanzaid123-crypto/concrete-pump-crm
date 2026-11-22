@@ -1,3 +1,5 @@
+import { getSupabaseClient } from './supabase';
+
 /**
  * CONCRETE PUMP MANAGEMENT SYSTEM (CPMS)
  * Client-Side AI Service Connector
@@ -76,10 +78,18 @@ export async function askAIOwnerAssistant(params: {
   userEmail?: string;
 }): Promise<AIOwnerAssistantResponse> {
   try {
+    const client = getSupabaseClient();
+    const { data: { session } } = client ? await client.auth.getSession() : { data: { session: null } };
+    if (!session?.access_token) {
+      return { success: false, responseText: 'Silakan login kembali untuk menggunakan fitur owner.', error: 'Sesi login tidak ditemukan.', restricted: true };
+    }
     const res = await fetch('/api/ai/owner-assistant', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ query: params.query }),
     });
 
     const data = await res.json();
