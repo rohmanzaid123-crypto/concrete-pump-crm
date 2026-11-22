@@ -37,6 +37,7 @@ export const FleetPage: React.FC = () => {
   const { user, role } = useAuth();
   const [units, setUnits] = useState<PumpUnit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,13 +52,21 @@ export const FleetPage: React.FC = () => {
 
   const loadData = async () => {
     setIsLoading(true);
-    const data = await fetchFleetUnits({
-      query: searchQuery,
-      category: selectedCategory,
-      status: selectedStatus,
-    });
-    setUnits(data);
-    setIsLoading(false);
+    setLoadError('');
+    try {
+      const data = await fetchFleetUnits({
+        query: searchQuery,
+        category: selectedCategory,
+        status: selectedStatus,
+      });
+      setUnits(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setLoadError(message);
+      setUnits([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -131,6 +140,21 @@ export const FleetPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {loadError && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+          <div>
+            <strong className="block">Data armada gagal dimuat</strong>
+            <span>{loadError}</span>
+          </div>
+          <button
+            onClick={loadData}
+            className="shrink-0 rounded-md border border-rose-300 bg-white px-3 py-1.5 font-semibold hover:bg-rose-100"
+          >
+            Coba lagi
+          </button>
+        </div>
+      )}
 
       {/* Fleet Dashboard KPI Strip (Strictly Required in Prompt) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
