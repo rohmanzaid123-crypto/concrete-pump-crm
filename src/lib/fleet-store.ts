@@ -779,6 +779,8 @@ const SEED_MAINTENANCE_RECORDS: MaintenanceRecord[] = [
 
 // Helper functions for persistent storage
 function loadStoredUnits(): PumpUnit[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   const raw = localStorage.getItem(STORAGE_FLEET_UNITS);
   if (!raw) {
     localStorage.setItem(STORAGE_FLEET_UNITS, JSON.stringify(SEED_PUMP_UNITS));
@@ -796,6 +798,8 @@ function saveStoredUnits(units: PumpUnit[]): void {
 }
 
 function loadStoredOperators(): Operator[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   const raw = localStorage.getItem(STORAGE_OPERATORS);
   if (!raw) {
     localStorage.setItem(STORAGE_OPERATORS, JSON.stringify(SEED_OPERATORS));
@@ -813,6 +817,8 @@ function saveStoredOperators(ops: Operator[]): void {
 }
 
 function loadStoredMaintenance(): MaintenanceRecord[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   const raw = localStorage.getItem(STORAGE_MAINTENANCE);
   if (!raw) {
     localStorage.setItem(STORAGE_MAINTENANCE, JSON.stringify(SEED_MAINTENANCE_RECORDS));
