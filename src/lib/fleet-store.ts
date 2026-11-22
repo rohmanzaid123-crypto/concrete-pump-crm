@@ -841,17 +841,23 @@ export interface FleetFilters {
 
 export async function fetchFleetUnits(filters?: FleetFilters): Promise<PumpUnit[]> {
   const client = getSupabaseClient();
-  let units = loadStoredUnits();
+  // Supabase is the source of truth whenever it is configured. An empty table
+  // must stay empty instead of silently showing demo/local seed records.
+  let units: PumpUnit[];
 
   if (client) {
-    try {
-      const { data, error } = await client.from('pump_units').select('*').order('unit_code', { ascending: true });
-      if (!error && data && data.length > 0) {
-        units = data as PumpUnit[];
-      }
-    } catch {
-      // fallback to stored
+    const { data, error } = await client
+      .from('pump_units')
+      .select('*')
+      .order('unit_code', { ascending: true });
+
+    if (error) {
+      throw new Error(`Gagal mengambil data armada dari Supabase: ${error.message}`);
     }
+    units = (data || []) as PumpUnit[];
+  } else {
+    // Local/demo mode is only used when Supabase is not configured.
+    units = loadStoredUnits();
   }
 
   // Filter query
@@ -916,55 +922,81 @@ export async function createPumpUnit(
   userEmail: string,
   userRole: string
 ): Promise<{ success: boolean; unit?: PumpUnit; error?: string }> {
-  const units = loadStoredUnits();
-
-  // Check unique plate number
-  const existingPlate = units.find(
-    (u) => u.plate_number.replace(/\s/g, '').toUpperCase() === unitData.plate_number.replace(/\s/g, '').toUpperCase()
-  );
-  if (existingPlate) {
-    return {
-      success: false,
-      error: `Nomor polisi ${unitData.plate_number} sudah terdaftar pada unit ${existingPlate.unit_code} (${existingPlate.name})`,
-    };
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, error: 'Supabase belum terhubung. Periksa konfigurasi aplikasi sebelum menyimpan armada.' };
   }
 
+  const plateNumber = unitData.plate_number.replace(/\s/g, '').toUpperCase();
   const now = new Date().toISOString();
-  const newUnit: PumpUnit = {
+  const payload = {
     ...unitData,
-    id: crypto.randomUUID ? crypto.randomUUID() : `unit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    plate_number: unitData.plate_number.trim().toUpperCase(),
+    insurance_expiry_date: unitData.insurance_expiry_date || null,
     created_at: now,
     updated_at: now,
   };
 
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      await client.from('pump_units').insert(newUnit);
-    } catch (err) {
-      console.warn('Supabase insert unit error:', err);
+  try {
+    // Exact normalized comparison avoids false negatives caused by spaces
+    // in Indonesian registration plates (for example: "B 1234 XYZ").
+    const { data: plateRows, error: lookupError } = await client
+      .from('pump_units')
+      .select('id, unit_code, name, plate_number');
+
+    if (lookupError) {
+      return { success: false, error: `Gagal memeriksa nomor polisi: ${lookupError.message}` };
     }
+
+    const existingPlate = (plateRows || []).find(
+      (unit) => unit.plate_number.replace(/\s/g, '').toUpperCase() === plateNumber
+    );
+    if (existingPlate) {
+      return {
+        success: false,
+        error: `Nomor polisi ${unitData.plate_number} sudah terdaftar pada unit ${existingPlate.unit_code} (${existingPlate.name})`,
+      };
+    }
+
+    // Let PostgreSQL generate the UUID primary key.
+    const { data, error } = await client
+      .from('pump_units')
+      .insert(payload)
+      .select('*')
+      .single();
+
+    if (error) {
+      return { success: false, error: `Gagal menyimpan armada ke Supabase: ${error.message}` };
+    }
+    if (!data) {
+      return { success: false, error: 'Supabase tidak mengembalikan data armada setelah penyimpanan.' };
+    }
+
+    const savedUnit = data as PumpUnit;
+    const units = loadStoredUnits().filter((unit) => unit.id !== savedUnit.id);
+    units.unshift(savedUnit);
+    saveStoredUnits(units);
+
+    await recordAuditLog({
+      user_id: userEmail,
+      user_email: userEmail,
+      user_role: userRole as 'owner' | 'admin',
+      action: 'CREATE_PUMP_UNIT',
+      entity_type: 'fleet',
+      entity_id: savedUnit.id,
+      details: {
+        unit_code: savedUnit.unit_code,
+        name: savedUnit.name,
+        boom_length: savedUnit.boom_length_meters,
+        plate_number: savedUnit.plate_number,
+      },
+    });
+
+    return { success: true, unit: savedUnit };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: `Gagal menyimpan armada: ${message}` };
   }
-
-  units.unshift(newUnit);
-  saveStoredUnits(units);
-
-  await recordAuditLog({
-    user_id: userEmail,
-    user_email: userEmail,
-    user_role: userRole as 'owner' | 'admin',
-    action: 'CREATE_PUMP_UNIT',
-    entity_type: 'fleet',
-    entity_id: newUnit.id,
-    details: {
-      unit_code: newUnit.unit_code,
-      name: newUnit.name,
-      boom_length: newUnit.boom_length_meters,
-      plate_number: newUnit.plate_number,
-    },
-  });
-
-  return { success: true, unit: newUnit };
 }
 
 export async function updatePumpUnit(
@@ -973,41 +1005,56 @@ export async function updatePumpUnit(
   userEmail: string = 'system@cpms-indonesia.com',
   userRole: string = 'owner'
 ): Promise<{ success: boolean; unit?: PumpUnit; error?: string }> {
-  const units = loadStoredUnits();
-  const index = units.findIndex((u) => u.id === id);
-  if (index === -1) {
-    return { success: false, error: 'Unit pompa tidak ditemukan.' };
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, error: 'Supabase belum terhubung. Periksa konfigurasi aplikasi sebelum mengubah armada.' };
   }
 
-  const updated: PumpUnit = {
-    ...units[index],
+  const updatePayload = {
     ...updates,
+    insurance_expiry_date: updates.insurance_expiry_date || null,
     updated_at: new Date().toISOString(),
   };
+  delete (updatePayload as Partial<PumpUnit>).id;
+  delete (updatePayload as Partial<PumpUnit>).created_at;
 
-  units[index] = updated;
-  saveStoredUnits(units);
+  try {
+    const { data, error } = await client
+      .from('pump_units')
+      .update(updatePayload)
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
 
-  const client = getSupabaseClient();
-  if (client) {
-    try {
-      await client.from('pump_units').update(updated).eq('id', id);
-    } catch (err) {
-      console.warn('Supabase update unit error:', err);
+    if (error) {
+      return { success: false, error: `Gagal memperbarui armada di Supabase: ${error.message}` };
     }
+    if (!data) {
+      return { success: false, error: 'Unit pompa tidak ditemukan di database atau akses Anda ditolak.' };
+    }
+
+    const updated = data as PumpUnit;
+    const units = loadStoredUnits();
+    const index = units.findIndex((unit) => unit.id === id);
+    if (index >= 0) units[index] = updated;
+    else units.unshift(updated);
+    saveStoredUnits(units);
+
+    await recordAuditLog({
+      user_id: userEmail,
+      user_email: userEmail,
+      user_role: userRole as 'owner' | 'admin',
+      action: 'UPDATE_PUMP_UNIT',
+      entity_type: 'fleet',
+      entity_id: id,
+      details: { unit_code: updated.unit_code, updated_fields: Object.keys(updates) },
+    });
+
+    return { success: true, unit: updated };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: `Gagal memperbarui armada: ${message}` };
   }
-
-  await recordAuditLog({
-    user_id: userEmail,
-    user_email: userEmail,
-    user_role: userRole as 'owner' | 'admin',
-    action: 'UPDATE_PUMP_UNIT',
-    entity_type: 'fleet',
-    entity_id: id,
-    details: { unit_code: updated.unit_code, updated_fields: Object.keys(updates) },
-  });
-
-  return { success: true, unit: updated };
 }
 
 export async function recordMaintenance(
