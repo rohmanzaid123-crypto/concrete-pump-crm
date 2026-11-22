@@ -442,6 +442,8 @@ export const DEFAULT_BOOKINGS: Booking[] = [
 // 4. STORAGE HELPERS
 // ==============================================================================
 function getLocalProjects(): Project[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_PROJECTS);
     if (!raw) {
@@ -455,6 +457,8 @@ function getLocalProjects(): Project[] {
 }
 
 function getLocalPricingRules(): PricingRule[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_PRICING_RULES);
     if (!raw) {
@@ -468,6 +472,8 @@ function getLocalPricingRules(): PricingRule[] {
 }
 
 function getLocalBookings(): Booking[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_BOOKINGS);
     if (!raw) {
