@@ -38,16 +38,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
           <strong className="text-orange-600 uppercase font-mono">OWNER</strong>.
         </p>
 
-        <div className="space-y-3">
-          <button
-            onClick={() => switchRole('owner')}
-            className="w-full py-2.5 px-4 bg-orange-600 hover:bg-orange-700 text-white font-medium text-xs rounded-lg transition-colors flex items-center justify-center gap-2"
-          >
-            <KeyRound className="w-4 h-4" />
-            Beralih ke Sesi OWNER (Dev Mode)
-          </button>
-
-          {onNavigateHome && (
+        {onNavigateHome && (
             <button
               onClick={onNavigateHome}
               className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors flex items-center justify-center gap-2"
@@ -56,7 +47,6 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
               Kembali ke Dashboard
             </button>
           )}
-        </div>
       </div>
     </div>
   );
