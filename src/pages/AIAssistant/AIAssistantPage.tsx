@@ -70,9 +70,8 @@ export const AIAssistantPage: React.FC = () => {
     {
       id: 'cs-init-1',
       sender: 'ai',
-      text:
-        'Halo! Selamat datang di layanan asisten virtual resmi PT Beton Perkasa Mandiri (CPMS).\n\nSaya dapat membantu Anda mengecek spesifikasi lebih dari 20 unit pompa beton, menghitung simulasi tarif resmi, memeriksa ketersediaan armada hari ini, atau membuatkan draft permintaan sewa (inquiry). Ada yang bisa kami bantu untuk proyek Anda?',
-      timestamp: '08:00 WIB',
+      text: 'Layanan AI pelanggan sedang dinonaktifkan sementara sampai tarif, jadwal armada, dan permintaan sewa terhubung ke database produksi.',
+      timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
     },
   ]);
 
