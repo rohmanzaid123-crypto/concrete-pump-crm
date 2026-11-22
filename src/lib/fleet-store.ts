@@ -893,11 +893,41 @@ export async function fetchUnitById(id: string): Promise<PumpUnit | null> {
 }
 
 export async function fetchUnitMaintenance(unitId: string): Promise<MaintenanceRecord[]> {
-  const records = loadStoredMaintenance();
-  return records.filter((m) => m.unit_id === unitId);
+  const client = getSupabaseClient();
+  if (client) {
+    const { data, error } = await client
+      .from('maintenance_records')
+      .select('*')
+      .eq('unit_id', unitId)
+      .order('service_date', { ascending: false });
+    if (error) {
+      console.error('Supabase fetch maintenance error:', error);
+      throw new Error(`Gagal memuat riwayat servis dari Supabase: ${error.message}`);
+    }
+    const records = (data || []) as MaintenanceRecord[];
+    const stored = loadStoredMaintenance().filter((record) => record.unit_id !== unitId);
+    saveStoredMaintenance([...stored, ...records]);
+    return records;
+  }
+
+  return loadStoredMaintenance().filter((record) => record.unit_id === unitId);
 }
 
 export async function fetchOperators(): Promise<Operator[]> {
+  const client = getSupabaseClient();
+  if (client) {
+    const { data, error } = await client
+      .from('operators')
+      .select('*')
+      .order('name', { ascending: true });
+    if (error) {
+      console.error('Supabase fetch operators error:', error);
+      throw new Error(`Gagal memuat operator dari Supabase: ${error.message}`);
+    }
+    const operators = (data || []) as Operator[];
+    saveStoredOperators(operators);
+    return operators;
+  }
   return loadStoredOperators();
 }
 
@@ -1013,41 +1043,53 @@ export async function updatePumpUnit(
   userEmail: string = 'system@cpms-indonesia.com',
   userRole: string = 'owner'
 ): Promise<{ success: boolean; unit?: PumpUnit; error?: string }> {
-  const units = loadStoredUnits();
-  const index = units.findIndex((u) => u.id === id);
-  if (index === -1) {
-    return { success: false, error: 'Unit pompa tidak ditemukan.' };
-  }
-
-  const updated: PumpUnit = {
-    ...units[index],
-    ...updates,
-    updated_at: new Date().toISOString(),
-  };
-
-  units[index] = updated;
-  saveStoredUnits(units);
-
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      await client.from('pump_units').update(updated).eq('id', id);
-    } catch (err) {
-      console.warn('Supabase update unit error:', err);
-    }
+  if (!client) {
+    return { success: false, error: 'Supabase belum dikonfigurasi. Periksa URL dan anon key pada Pengaturan.' };
   }
 
-  await recordAuditLog({
-    user_id: userEmail,
-    user_email: userEmail,
-    user_role: userRole as 'owner' | 'admin',
-    action: 'UPDATE_PUMP_UNIT',
-    entity_type: 'fleet',
-    entity_id: id,
-    details: { unit_code: updated.unit_code, updated_fields: Object.keys(updates) },
-  });
+  try {
+    const payload = { ...updates, updated_at: new Date().toISOString() };
+    delete (payload as Partial<PumpUnit>).id;
+    delete (payload as Partial<PumpUnit>).created_at;
 
-  return { success: true, unit: updated };
+    const { data, error } = await client
+      .from('pump_units')
+      .update(payload)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Supabase update unit error:', error);
+      return { success: false, error: `Gagal memperbarui unit di Supabase: ${error.message}` };
+    }
+    if (!data) return { success: false, error: 'Supabase tidak mengembalikan data unit setelah pembaruan.' };
+
+    const updated = data as PumpUnit;
+    const cached = loadStoredUnits().filter((unit) => unit.id !== id);
+    cached.push(updated);
+    saveStoredUnits(cached);
+
+    try {
+      await recordAuditLog({
+        user_id: userEmail,
+        user_email: userEmail,
+        user_role: userRole as 'owner' | 'admin',
+        action: 'UPDATE_PUMP_UNIT',
+        entity_type: 'fleet',
+        entity_id: id,
+        details: { unit_code: updated.unit_code, updated_fields: Object.keys(updates) },
+      });
+    } catch (auditError) {
+      console.error('Unit updated, but audit log failed:', auditError);
+    }
+
+    return { success: true, unit: updated };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: `Gagal memperbarui unit di Supabase: ${message}` };
+  }
 }
 
 export async function recordMaintenance(
@@ -1055,42 +1097,79 @@ export async function recordMaintenance(
   userEmail: string,
   userRole: string
 ): Promise<MaintenanceRecord> {
-  const records = loadStoredMaintenance();
-  const newRec: MaintenanceRecord = {
-    ...record,
-    id: `maint_${Date.now()}`,
-    created_at: new Date().toISOString(),
-  };
-
-  records.unshift(newRec);
-  saveStoredMaintenance(records);
-
-  // Update unit's total maintenance cost and next service date
-  const units = loadStoredUnits();
-  const uIndex = units.findIndex((u) => u.id === record.unit_id);
-  if (uIndex !== -1) {
-    units[uIndex].total_maintenance_cost = (units[uIndex].total_maintenance_cost || 0) + record.cost_amount;
-    if (record.next_recommended_service_date) {
-      units[uIndex].next_service_date = record.next_recommended_service_date;
-    }
-    saveStoredUnits(units);
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase belum dikonfigurasi. Catatan servis tidak disimpan.');
   }
 
-  await recordAuditLog({
-    user_id: userEmail,
-    user_email: userEmail,
-    user_role: userRole as 'owner' | 'admin',
-    action: 'RECORD_MAINTENANCE',
-    entity_type: 'maintenance',
-    entity_id: newRec.id,
-    details: {
-      unit_code: record.unit_code,
-      service_type: record.service_type,
-      cost_amount: record.cost_amount,
-    },
-  });
+  const { data: savedRecord, error: insertError } = await client
+    .from('maintenance_records')
+    .insert(record)
+    .select('*')
+    .single();
 
-  return newRec;
+  if (insertError) {
+    console.error('Supabase insert maintenance error:', insertError);
+    throw new Error(`Gagal menyimpan catatan servis ke Supabase: ${insertError.message}`);
+  }
+  if (!savedRecord) throw new Error('Supabase tidak mengembalikan catatan servis yang tersimpan.');
+
+  const { data: currentUnit, error: unitReadError } = await client
+    .from('pump_units')
+    .select('total_maintenance_cost')
+    .eq('id', record.unit_id)
+    .single();
+
+  if (unitReadError) {
+    throw new Error(`Catatan servis tersimpan, tetapi total biaya unit gagal dibaca: ${unitReadError.message}`);
+  }
+
+  const unitUpdates: Partial<PumpUnit> = {
+    total_maintenance_cost: Number(currentUnit?.total_maintenance_cost || 0) + Number(record.cost_amount || 0),
+  };
+  if (record.next_recommended_service_date) {
+    unitUpdates.next_service_date = record.next_recommended_service_date;
+  }
+
+  const { error: unitUpdateError } = await client
+    .from('pump_units')
+    .update(unitUpdates)
+    .eq('id', record.unit_id);
+
+  if (unitUpdateError) {
+    throw new Error(`Catatan servis tersimpan, tetapi ringkasan unit gagal diperbarui: ${unitUpdateError.message}`);
+  }
+
+  const newRecord = savedRecord as MaintenanceRecord;
+  const records = loadStoredMaintenance().filter((item) => item.id !== newRecord.id);
+  saveStoredMaintenance([newRecord, ...records]);
+
+  const units = loadStoredUnits().map((unit) =>
+    unit.id === record.unit_id
+      ? { ...unit, ...unitUpdates, updated_at: new Date().toISOString() }
+      : unit
+  );
+  saveStoredUnits(units);
+
+  try {
+    await recordAuditLog({
+      user_id: userEmail,
+      user_email: userEmail,
+      user_role: userRole as 'owner' | 'admin',
+      action: 'RECORD_MAINTENANCE',
+      entity_type: 'maintenance',
+      entity_id: newRecord.id,
+      details: {
+        unit_code: record.unit_code,
+        service_type: record.service_type,
+        cost_amount: record.cost_amount,
+      },
+    });
+  } catch (auditError) {
+    console.error('Maintenance saved, but audit log failed:', auditError);
+  }
+
+  return newRecord;
 }
 
 /**
