@@ -453,7 +453,14 @@ function getUnfollowedLeads() {
 // 1. ENDPOINT: AI CUSTOMER SERVICE (/api/ai/customer-service)
 // ==============================================================================
 
-app.post('/api/ai/customer-service', async (req: Request, res: Response) => {
+app.post('/api/ai/customer-service', async (_req: Request, res: Response) => {
+  // Do not publish sample prices, availability, or in-memory inquiries as live business data.
+  res.status(503).json({
+    success: false,
+    error: 'Layanan AI pelanggan sementara dinonaktifkan sampai tarif, jadwal armada, dan inquiry tersambung ke database produksi.',
+  });
+  return;
+
   try {
     const { message, customerPhone, customerName } = req.body;
 
