@@ -176,7 +176,7 @@ export const UnitFormModal: React.FC<UnitFormModalProps> = ({
             next_service_engine_hours: Number(nextServiceHours),
             stnk_expiry_date: stnkExpiry,
             kir_expiry_date: kirExpiry,
-            insurance_expiry_date: insuranceExpiry,
+            insurance_expiry_date: insuranceExpiry || undefined,
             notes: notes.trim(),
           },
           user.email,
