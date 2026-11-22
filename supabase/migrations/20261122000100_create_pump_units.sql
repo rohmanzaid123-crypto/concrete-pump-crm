@@ -53,7 +53,18 @@ CREATE TABLE IF NOT EXISTS public.operators (
 
 -- Existing early/manual setup may have created a simplified operators table.
 -- Add only the CPMS operator columns if they are missing.
+-- Preserve any existing operator names from a previous simplified table.
+DO $ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'operators' AND column_name = 'operator_name'
+  ) THEN
+    EXECUTE 'UPDATE public.operators SET name = operator_name WHERE name IS NULL';
+  END IF;
+END $;
 ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS name TEXT;
+UPDATE public.operators SET name = COALESCE(name, assigned_unit_code, 'Operator') WHERE name IS NULL;
+ALTER TABLE public.operators ALTER COLUMN name SET NOT NULL;
 ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS role_type TEXT NOT NULL DEFAULT 'operator_boom';
 ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS phone_number TEXT NOT NULL DEFAULT '';
 ALTER TABLE public.operators ADD COLUMN IF NOT EXISTS whatsapp_number TEXT NOT NULL DEFAULT '';
@@ -98,6 +109,34 @@ CREATE TABLE IF NOT EXISTS public.pump_units (
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
+
+-- Complete missing columns when an earlier manual setup created pump_units
+-- with a reduced field list. Existing rows remain intact.
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS category_code public.pump_category_code NOT NULL DEFAULT 'standard_24_36m';
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS brand_chassis TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS brand_pump TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS boom_length_meters NUMERIC(5,2) NOT NULL DEFAULT 32.00;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS boom_sections TEXT NOT NULL DEFAULT '4-Section Z-Fold';
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS output_capacity_m3_hour NUMERIC(6,2) NOT NULL DEFAULT 120.00;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS max_pressure_bar NUMERIC(6,2) NOT NULL DEFAULT 85.00;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS year_manufactured INTEGER NOT NULL DEFAULT 2021;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS engine_hours NUMERIC(10,2) NOT NULL DEFAULT 2500.00;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS primary_operator_id UUID REFERENCES public.operators(id) ON DELETE SET NULL;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS primary_operator_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS secondary_operator_name TEXT;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS driver_name TEXT;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS current_project_location TEXT;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS next_service_date DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS next_service_engine_hours NUMERIC(10,2) NOT NULL DEFAULT 3000.00;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS total_maintenance_cost NUMERIC(15,2) NOT NULL DEFAULT 0.00;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS stnk_expiry_date DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS kir_expiry_date DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS insurance_expiry_date DATE;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS total_rental_hours NUMERIC(10,2) DEFAULT 0.00;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS total_m3_pumped NUMERIC(10,2) DEFAULT 0.00;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now());
+ALTER TABLE public.pump_units ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now());
 
 CREATE INDEX IF NOT EXISTS idx_pump_units_code ON public.pump_units(unit_code);
 CREATE INDEX IF NOT EXISTS idx_pump_units_status ON public.pump_units(status);
