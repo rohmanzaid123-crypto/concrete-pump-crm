@@ -938,33 +938,67 @@ export async function createPumpUnit(
   };
 
   const client = getSupabaseClient();
-  if (client) {
-    try {
-      await client.from('pump_units').insert(newUnit);
-    } catch (err) {
-      console.warn('Supabase insert unit error:', err);
-    }
+  if (!client) {
+    return {
+      success: false,
+      error: 'Supabase belum dikonfigurasi. Periksa URL dan anon key pada Pengaturan.',
+    };
   }
 
-  units.unshift(newUnit);
-  saveStoredUnits(units);
+  // Persist to Supabase first. Do not report success or save a local-only copy
+  // when the remote insert fails.
+  try {
+    const { data, error } = await client
+      .from('pump_units')
+      .insert(newUnit)
+      .select('*')
+      .single();
 
-  await recordAuditLog({
-    user_id: userEmail,
-    user_email: userEmail,
-    user_role: userRole as 'owner' | 'admin',
-    action: 'CREATE_PUMP_UNIT',
-    entity_type: 'fleet',
-    entity_id: newUnit.id,
-    details: {
-      unit_code: newUnit.unit_code,
-      name: newUnit.name,
-      boom_length: newUnit.boom_length_meters,
-      plate_number: newUnit.plate_number,
-    },
-  });
+    if (error) {
+      console.error('Supabase insert unit error:', error);
+      return {
+        success: false,
+        error: `Gagal menyimpan unit ke Supabase: ${error.message}`,
+      };
+    }
 
-  return { success: true, unit: newUnit };
+    if (!data) {
+      return {
+        success: false,
+        error: 'Supabase tidak mengembalikan data unit setelah penyimpanan.',
+      };
+    }
+
+    const savedUnit = data as PumpUnit;
+    units.unshift(savedUnit);
+    saveStoredUnits(units);
+
+    try {
+      await recordAuditLog({
+        user_id: userEmail,
+        user_email: userEmail,
+        user_role: userRole as 'owner' | 'admin',
+        action: 'CREATE_PUMP_UNIT',
+        entity_type: 'fleet',
+        entity_id: savedUnit.id,
+        details: {
+          unit_code: savedUnit.unit_code,
+          name: savedUnit.name,
+          boom_length: savedUnit.boom_length_meters,
+          plate_number: savedUnit.plate_number,
+        },
+      });
+    } catch (auditError) {
+      console.error('Unit saved, but audit log failed:', auditError);
+    }
+
+    return { success: true, unit: savedUnit };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Supabase insert unit exception:', err);
+    return { success: false, error: `Gagal menyimpan unit ke Supabase: ${message}` };
+  }
+
 }
 
 export async function updatePumpUnit(
