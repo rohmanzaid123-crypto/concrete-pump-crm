@@ -918,33 +918,11 @@ export function generateUnitCode(categoryCode: PumpCategoryCode, boomLength: num
   const nextNum = matches.length + 1;
   return `${prefix}${nextNum.toString().padStart(2, '0')}`;
 }
-
 export async function createPumpUnit(
   unitData: Omit<PumpUnit, 'id' | 'created_at' | 'updated_at'>,
   userEmail: string,
   userRole: string
 ): Promise<{ success: boolean; unit?: PumpUnit; error?: string }> {
-  const units = loadStoredUnits();
-
-  // Check unique plate number
-  const existingPlate = units.find(
-    (u) => u.plate_number.replace(/\s/g, '').toUpperCase() === unitData.plate_number.replace(/\s/g, '').toUpperCase()
-  );
-  if (existingPlate) {
-    return {
-      success: false,
-      error: `Nomor polisi ${unitData.plate_number} sudah terdaftar pada unit ${existingPlate.unit_code} (${existingPlate.name})`,
-    };
-  }
-
-  const now = new Date().toISOString();
-  const newUnit: PumpUnit = {
-    ...unitData,
-    id: crypto.randomUUID ? crypto.randomUUID() : `unit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    created_at: now,
-    updated_at: now,
-  };
-
   const client = getSupabaseClient();
   if (!client) {
     return {
@@ -953,12 +931,32 @@ export async function createPumpUnit(
     };
   }
 
-  // Persist to Supabase first. Do not report success or save a local-only copy
-  // when the remote insert fails.
   try {
-    const { data, error } = await client
+    // Check duplicates against the database, not the demo/local seed cache.
+    const normalizedPlate = unitData.plate_number.replace(/\\s/g, '').toUpperCase();
+    const { data: duplicate, error: duplicateError } = await client
       .from('pump_units')
-      .insert(newUnit)
+      .select('id, unit_code, name, plate_number')
+      .ilike('plate_number', unitData.plate_number.trim())
+      .maybeSingle();
+
+    if (duplicateError) {
+      return {
+        success: false,
+        error: `Gagal memeriksa nomor polisi di Supabase: ${duplicateError.message}`,
+      };
+    }
+
+    if (duplicate && String(duplicate.plate_number || '').replace(/\\s/g, '').toUpperCase() === normalizedPlate) {
+      return {
+        success: false,
+        error: `Nomor polisi ${unitData.plate_number} sudah terdaftar pada unit ${duplicate.unit_code} (${duplicate.name})`,
+      };
+    }
+
+    const { data: newUnit, error } = await client
+      .from('pump_units')
+      .insert(unitData)
       .select('*')
       .single();
 
@@ -970,16 +968,17 @@ export async function createPumpUnit(
       };
     }
 
-    if (!data) {
+    if (!newUnit) {
       return {
         success: false,
         error: 'Supabase tidak mengembalikan data unit setelah penyimpanan.',
       };
     }
 
-    const savedUnit = data as PumpUnit;
-    units.unshift(savedUnit);
-    saveStoredUnits(units);
+    // Refresh cache from the canonical remote result.
+    const cachedUnits = loadStoredUnits().filter((unit) => unit.id !== newUnit.id);
+    cachedUnits.unshift(newUnit as PumpUnit);
+    saveStoredUnits(cachedUnits);
 
     try {
       await recordAuditLog({
@@ -988,25 +987,24 @@ export async function createPumpUnit(
         user_role: userRole as 'owner' | 'admin',
         action: 'CREATE_PUMP_UNIT',
         entity_type: 'fleet',
-        entity_id: savedUnit.id,
+        entity_id: newUnit.id,
         details: {
-          unit_code: savedUnit.unit_code,
-          name: savedUnit.name,
-          boom_length: savedUnit.boom_length_meters,
-          plate_number: savedUnit.plate_number,
+          unit_code: newUnit.unit_code,
+          name: newUnit.name,
+          boom_length: newUnit.boom_length_meters,
+          plate_number: newUnit.plate_number,
         },
       });
     } catch (auditError) {
       console.error('Unit saved, but audit log failed:', auditError);
     }
 
-    return { success: true, unit: savedUnit };
+    return { success: true, unit: newUnit as PumpUnit };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('Supabase insert unit exception:', err);
+    console.error('Supabase create unit exception:', err);
     return { success: false, error: `Gagal menyimpan unit ke Supabase: ${message}` };
   }
-
 }
 
 export async function updatePumpUnit(
