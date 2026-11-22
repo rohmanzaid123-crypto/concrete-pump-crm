@@ -144,6 +144,19 @@ CREATE INDEX IF NOT EXISTS idx_pump_units_category ON public.pump_units(category
 CREATE INDEX IF NOT EXISTS idx_pump_units_plate ON public.pump_units(plate_number);
 CREATE INDEX IF NOT EXISTS idx_operators_status ON public.operators(status);
 
+-- Owner check used by the delete policy below.
+CREATE OR REPLACE FUNCTION public.is_owner()
+RETURNS BOOLEAN AS $
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = auth.uid()
+      AND role = 'owner'
+  );
+END;
+$ LANGUAGE plpgsql SECURITY DEFINER;
+
 ALTER TABLE public.pump_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.operators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pump_units ENABLE ROW LEVEL SECURITY;
