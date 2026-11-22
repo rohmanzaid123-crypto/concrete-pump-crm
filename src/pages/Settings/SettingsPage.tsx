@@ -32,7 +32,7 @@ import {
 import { formatTanggal } from '../../lib/formatters';
 
 export const SettingsPage: React.FC = () => {
-  const { user, role, switchRole } = useAuth();
+  const { user, role } = useAuth();
   const [activeTab, setActiveTab] = useState<'supabase' | 'company' | 'users' | 'audit'>('company');
 
   // Supabase Config State
@@ -612,30 +612,7 @@ ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;`;
                 </p>
               </div>
 
-              {/* Dev Switch Role */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 font-medium">Uji Peran Aktif:</span>
-                <button
-                  onClick={() => switchRole('owner')}
-                  className={`px-3 py-1 rounded text-xs font-bold font-mono transition-colors ${
-                    role === 'owner'
-                      ? 'bg-orange-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  OWNER
-                </button>
-                <button
-                  onClick={() => switchRole('admin')}
-                  className={`px-3 py-1 rounded text-xs font-bold font-mono transition-colors ${
-                    role === 'admin'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  ADMIN
-                </button>
-              </div>
+              <div className="text-xs text-slate-500">Peran akun ditetapkan oleh owner di database.</div>
             </div>
 
             {/* Matrix of Privileges */}
