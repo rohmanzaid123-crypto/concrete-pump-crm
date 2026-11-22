@@ -18,11 +18,18 @@ export function getStoredSupabaseConfig(): SupabaseConfig {
   const envUrl = (import.meta.env.VITE_SUPABASE_URL as string) || '';
   const envKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
 
-  const localUrl = localStorage.getItem(STORAGE_KEY_URL) || '';
-  const localKey = localStorage.getItem(STORAGE_KEY_KEY) || '';
+  // Production builds must use deployment environment variables only.
+  // Browser-editable localStorage configuration remains available in development.
+  const isProduction = Boolean(import.meta.env.PROD);
+  const localUrl = isProduction ? '' : (localStorage.getItem(STORAGE_KEY_URL) || '');
+  const localKey = isProduction ? '' : (localStorage.getItem(STORAGE_KEY_KEY) || '');
 
-  const url = localUrl || (envUrl.includes('your-project') ? '' : envUrl);
-  const anonKey = localKey || (envKey === 'your-anon-key' ? '' : envKey);
+  const url = isProduction
+    ? (envUrl.includes('your-project') ? '' : envUrl)
+    : (localUrl || (envUrl.includes('your-project') ? '' : envUrl));
+  const anonKey = isProduction
+    ? (envKey === 'your-anon-key' ? '' : envKey)
+    : (localKey || (envKey === 'your-anon-key' ? '' : envKey));
 
   const isConfigured = Boolean(url && anonKey && url.startsWith('https://') && anonKey.length > 20);
 
