@@ -688,6 +688,8 @@ export const DEFAULT_EXPENSES: Expense[] = [
 // 6. STORAGE HELPERS
 // ==============================================================================
 function getLocalCashAccounts(): CashAccount[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_CASH_ACCOUNTS);
     if (!raw) {
@@ -701,6 +703,8 @@ function getLocalCashAccounts(): CashAccount[] {
 }
 
 function getLocalQuotations(): Quotation[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_QUOTATIONS);
     if (!raw) {
@@ -714,6 +718,8 @@ function getLocalQuotations(): Quotation[] {
 }
 
 function getLocalInvoices(): Invoice[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_INVOICES);
     if (!raw) {
@@ -727,6 +733,8 @@ function getLocalInvoices(): Invoice[] {
 }
 
 function getLocalPayments(): Payment[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_PAYMENTS);
     if (!raw) {
@@ -740,6 +748,8 @@ function getLocalPayments(): Payment[] {
 }
 
 function getLocalExpenses(): Expense[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_EXPENSES);
     if (!raw) {
