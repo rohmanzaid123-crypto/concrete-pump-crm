@@ -9,6 +9,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
@@ -16,6 +17,55 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json());
+type CPMSRole = 'owner' | 'admin';
+type AuthenticatedRequest = Request & {
+  cpmsUser?: { id: string; email: string; role: CPMSRole };
+};
+
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+const authClient = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false } })
+  : null;
+
+async function requireCpmsAuth(req: Request, res: Response, next: express.NextFunction) {
+  const authorization = req.header('authorization') || '';
+  const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+  if (!authClient || !token) {
+    res.status(401).json({ error: 'Autentikasi diperlukan.' });
+    return;
+  }
+  try {
+    const { data: { user }, error } = await authClient.auth.getUser(token);
+    if (error || !user) {
+      res.status(401).json({ error: 'Sesi tidak valid atau sudah kedaluwarsa.' });
+      return;
+    }
+    const { data: profile, error: profileError } = await authClient
+      .from('profiles').select('id,email,role').eq('id', user.id).maybeSingle();
+    if (profileError || !profile || !['owner', 'admin'].includes(profile.role)) {
+      res.status(403).json({ error: 'Akun tidak memiliki profil atau peran CPMS yang sah.' });
+      return;
+    }
+    (req as AuthenticatedRequest).cpmsUser = {
+      id: user.id,
+      email: user.email || profile.email || '',
+      role: profile.role as CPMSRole,
+    };
+    next();
+  } catch {
+    res.status(401).json({ error: 'Tidak dapat memverifikasi sesi pengguna.' });
+  }
+}
+
+function requireOwner(req: Request, res: Response, next: express.NextFunction) {
+  if ((req as AuthenticatedRequest).cpmsUser?.role !== 'owner') {
+    res.status(403).json({ error: 'Fitur ini hanya tersedia untuk akun owner.', restricted: true });
+    return;
+  }
+  next();
+}
+
 
 // Initialize GoogleGenAI SDK (Server-Side Only)
 const apiKey = process.env.GEMINI_API_KEY || '';
@@ -557,7 +607,16 @@ Gunakan Bahasa Indonesia yang ramah, sopan, sangat profesional khas industri kon
 // 2. ENDPOINT: AI OWNER ASSISTANT (/api/ai/owner-assistant)
 // ==============================================================================
 
-app.post('/api/ai/owner-assistant', async (req: Request, res: Response) => {
+app.post('/api/ai/owner-assistant', requireCpmsAuth, requireOwner, async (req: Request, res: Response) => {
+  // Do not return fabricated financial KPIs. Re-enable after connecting this assistant
+  // to verified production tables and adding integration tests.
+  res.status(503).json({
+    success: false,
+    error: 'Asisten finansial sementara dinonaktifkan karena sumber laporan produksi belum terhubung.',
+    restricted: true,
+  });
+  return;
+  
   try {
     const { query, userRole, userEmail } = req.body;
 
