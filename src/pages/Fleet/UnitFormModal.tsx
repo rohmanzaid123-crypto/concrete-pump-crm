@@ -136,8 +136,11 @@ export const UnitFormModal: React.FC<UnitFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
     setErrorMessage('');
+    if (!user) {
+      setErrorMessage('Sesi login tidak ditemukan. Silakan login ulang sebelum menyimpan data armada.');
+      return;
+    }
 
     if (!name.trim()) {
       setErrorMessage('Nama model pompa wajib diisi.');
@@ -176,7 +179,7 @@ export const UnitFormModal: React.FC<UnitFormModalProps> = ({
             next_service_engine_hours: Number(nextServiceHours),
             stnk_expiry_date: stnkExpiry,
             kir_expiry_date: kirExpiry,
-            insurance_expiry_date: insuranceExpiry,
+            insurance_expiry_date: insuranceExpiry || undefined,
             notes: notes.trim(),
           },
           user.email,
