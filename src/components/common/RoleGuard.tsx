@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { ShieldAlert, ArrowLeft, KeyRound } from 'lucide-react';
+import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/database';
 
@@ -16,7 +16,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   fallbackTitle = 'Akses Terbatas (Privilese Owner)',
   onNavigateHome,
 }) => {
-  const { role, switchRole } = useAuth();
+  const { role } = useAuth();
 
   // If role requirement is met (Owner has access to both owner & admin, admin only has admin)
   const hasAccess = requiredRole === 'admin' ? true : role === 'owner';
