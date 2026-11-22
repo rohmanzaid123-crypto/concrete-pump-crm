@@ -335,6 +335,8 @@ export function saveWhatsAppConfig(config: WhatsAppConfig): void {
 }
 
 function getLocalContacts(): WhatsAppContact[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_WA_CONTACTS);
     if (!raw) {
@@ -348,6 +350,8 @@ function getLocalContacts(): WhatsAppContact[] {
 }
 
 function getLocalConversations(): WhatsAppConversation[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_WA_CONVERSATIONS);
     if (!raw) {
@@ -361,6 +365,8 @@ function getLocalConversations(): WhatsAppConversation[] {
 }
 
 function getLocalMessages(): WhatsAppMessage[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_WA_MESSAGES);
     if (!raw) {
@@ -374,6 +380,8 @@ function getLocalMessages(): WhatsAppMessage[] {
 }
 
 function getLocalTemplates(): WhatsAppTemplate[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_WA_TEMPLATES);
     if (!raw) {
@@ -387,6 +395,8 @@ function getLocalTemplates(): WhatsAppTemplate[] {
 }
 
 function getLocalNotifications(): CPMSNotification[] {
+  // Never surface seeded/demo data in production.
+  if (import.meta.env.PROD) return [];
   try {
     const raw = localStorage.getItem(STORAGE_NOTIFICATIONS);
     if (!raw) {
