@@ -3,7 +3,6 @@ import {
   Database,
   ChevronRight,
   Shield,
-  RefreshCw,
   Building2,
   CheckCircle2,
   AlertCircle,
@@ -19,7 +18,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentTab, onNavigateToSettings }) => {
-  const { user, role, switchRole } = useAuth();
+  const { user, role } = useAuth();
   const [supabaseStatus, setSupabaseStatus] = useState<{
     tested: boolean;
     online: boolean;
@@ -109,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, onNavigateToSettings
           </button>
         </div>
 
-        {/* Role Indicator & Quick Switch */}
+        {/* Role Indicator */}
         <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded border border-slate-200">
           <div
             className={`px-2.5 py-1 rounded text-xs font-bold font-mono uppercase flex items-center gap-1.5 ${
@@ -121,13 +120,6 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, onNavigateToSettings
             <Shield className="w-3 h-3" />
             {role}
           </div>
-          <button
-            onClick={() => switchRole(role === 'owner' ? 'admin' : 'owner')}
-            title={`Saat ini role ${role}. Klik untuk beralih ke ${role === 'owner' ? 'admin' : 'owner'}`}
-            className="p-1 hover:bg-white text-slate-600 hover:text-slate-900 rounded transition-colors"
-          >
-            <RefreshCw className="w-3 h-3" />
-          </button>
         </div>
       </div>
     </header>
