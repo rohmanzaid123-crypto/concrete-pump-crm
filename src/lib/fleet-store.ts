@@ -938,16 +938,20 @@ export async function createPumpUnit(
   };
 
   try {
-    const { data: existingPlate, error: lookupError } = await client
+    // Exact normalized comparison avoids false negatives caused by spaces
+    // in Indonesian registration plates (for example: "B 1234 XYZ").
+    const { data: plateRows, error: lookupError } = await client
       .from('pump_units')
-      .select('id, unit_code, name, plate_number')
-      .ilike('plate_number', unitData.plate_number.trim())
-      .maybeSingle();
+      .select('id, unit_code, name, plate_number');
 
     if (lookupError) {
       return { success: false, error: `Gagal memeriksa nomor polisi: ${lookupError.message}` };
     }
-    if (existingPlate && existingPlate.plate_number.replace(/\s/g, '').toUpperCase() === plateNumber) {
+
+    const existingPlate = (plateRows || []).find(
+      (unit) => unit.plate_number.replace(/\s/g, '').toUpperCase() === plateNumber
+    );
+    if (existingPlate) {
       return {
         success: false,
         error: `Nomor polisi ${unitData.plate_number} sudah terdaftar pada unit ${existingPlate.unit_code} (${existingPlate.name})`,
