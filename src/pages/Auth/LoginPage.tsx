@@ -1,22 +1,18 @@
 import React, { useState } from 'react';
 import {
   Truck,
-  Shield,
-  KeyRound,
   ArrowRight,
   Database,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
-  HardHat,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getStoredSupabaseConfig } from '../../lib/supabase';
 
 export const LoginPage: React.FC = () => {
   const { login, isLoading } = useAuth();
-  const [email, setEmail] = useState('owner@cpms.id');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -75,53 +71,11 @@ export const LoginPage: React.FC = () => {
             <div className="mb-6 pb-4 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Masuk ke Sistem</h2>
-                <p className="text-xs text-slate-500">Pilih peran atau masukkan akun Supabase Anda</p>
+                <p className="text-xs text-slate-500">Masuk menggunakan akun resmi CPMS</p>
               </div>
               <span className="text-xs px-2.5 py-1 bg-slate-100 text-slate-700 font-mono font-medium rounded border border-slate-200">
                 v1.0.0
               </span>
-            </div>
-
-            {/* Quick Role Fill Buttons */}
-            <div className="mb-6 space-y-2">
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                Pilih Akun Cepat (Dev / Operasional)
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickSelect('owner')}
-                  className={`p-3 rounded-xl border text-left transition-all ${
-                    email.includes('owner')
-                      ? 'border-orange-500 bg-orange-50/70 text-orange-950 ring-1 ring-orange-400'
-                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 mb-1 text-orange-600 font-bold text-xs uppercase font-mono">
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>Peran OWNER</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 truncate">owner@cpms.id</p>
-                  <span className="text-[10px] text-orange-700 block mt-1 font-medium">Hak Penuh & Finansial</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickSelect('admin')}
-                  className={`p-3 rounded-xl border text-left transition-all ${
-                    email.includes('admin')
-                      ? 'border-blue-500 bg-blue-50/70 text-blue-950 ring-1 ring-blue-400'
-                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 mb-1 text-blue-600 font-bold text-xs uppercase font-mono">
-                    <HardHat className="w-3.5 h-3.5" />
-                    <span>Peran ADMIN</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 truncate">admin@cpms.id</p>
-                  <span className="text-[10px] text-blue-700 block mt-1 font-medium">Operasional & Jadwal</span>
-                </button>
-              </div>
             </div>
 
             {errorMessage && (
