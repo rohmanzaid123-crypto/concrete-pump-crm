@@ -59,12 +59,12 @@ export async function askAICustomerService(params: {
 
     return data;
   } catch (err: any) {
-    console.warn('Backend AI CS error, returning resilient client response:', err);
+    console.warn('Backend AI CS is unavailable:', err);
     return {
-      success: true,
-      responseText:
-        'Halo! Selamat datang di layanan informasi resmi PT Beton Perkasa Mandiri (CPMS).\n\nKami melayani sewa Concrete Pump 24–36m, 37–42m, Super Long Boom, Mini 21m, dan Pompa Kodok. Seluruh tarif mengacu pada aturan resmi (Paket 8 Jam termasuk 50 m³).\n\nSilakan sampaikan lokasi proyek dan tanggal pengecoran Anda untuk kami periksa ketersediaan armada.',
-      toolExecuted: 'client_fallback',
+      success: false,
+      responseText: 'Layanan AI pelanggan belum tersedia. Silakan hubungi admin CPMS untuk konfirmasi tarif dan jadwal.',
+      error: err instanceof Error ? err.message : 'Layanan sementara tidak tersedia.',
+      toolExecuted: 'unavailable',
     };
   }
 }
